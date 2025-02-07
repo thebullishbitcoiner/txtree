@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>txTree</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1 style="margin: 10px; margin-top: 0px;">txTree</h1>
+    
+    <div class="container">
+        <div class="input-container">
+            <input type="text" id="txid" placeholder="Enter Transaction ID" />
+            <button id="fetch-btn" aria-label="Fetch Transaction">Fetch Transaction</button>
+        </div>
+        <div id="result"></div>
+        <div id="timeline" class="timeline"></div>
+    </div>
+
+    <footer>
+        Made with 🐂 by <a href="https://thebullishbitcoiner.com" target="_blank">thebullishbitcoiner</a>
+    </footer>
+
+    <script>
+
+        document.getElementById('fetch-btn').addEventListener('click', fetchTransactionData);
+
+        // Add event listener for Enter key
+        document.getElementById('txid').addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                fetchTransactionData();
+            }
+        });
+
+        async function fetchTransactionData() {
+            const txid = document.getElementById('txid').value;
+            const resultDiv = document.getElementById('result');
+            const timelineDiv = document.getElementById('timeline');
+            timelineDiv.innerHTML = ''; // Clear previous timeline
+            resultDiv.innerHTML = ''; // Clear previous results
+
+            if (!txid) {
+                resultDiv.innerHTML = 'Please enter a transaction ID.';
+                resultDiv.style.display = 'block'; // Show result div
+                return;
+            }
+
+            resultDiv.innerHTML = 'Fetching transaction...'; // Loading message
+            resultDiv.style.display = 'block'; // Show result div
+
+            try {
+                await fetchTransaction(txid, timelineDiv);
+            } catch (error) {
+                resultDiv.innerHTML = error.message;
+            }
+        }
+
+        async function fetchTransaction(txid, timelineDiv) {
+            const response = await fetch(`https://mempool.space/api/tx/${txid}`);
+            if (!response.ok) {
+                throw new Error('Transaction not found');
+            }
+            const data = await response.json();
+            displayTransaction(data, timelineDiv);
+            await traceInputs(data, timelineDiv);
+        }
+
+        function displayTransaction(data, timelineDiv) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+        <p><strong>Transaction ID:</strong> <span class="transaction-id">${data.txid}</span></p>
+        <p><strong>Block Height:</strong> ${data.status.block_height}</p>
+        <p><strong>Size:</strong> ${data.size} bytes</p>
+        <p><strong>Fee:</strong> ${data.fee} satoshis</p>
+        <p><strong>Time:</strong> ${new Date(data.status.block_time * 1000).toLocaleString()}</p>
+    `;
+        }
+
+        async function traceInputs(data, timelineDiv, depth = 0) {
+            // Limit the recursion to a maximum depth of 3
+            if (depth >= 3) {
+                return;
+            }
+
+            for (const input of data.vin) {
+                if (input.txid) {
+                    const inputTxid = input.txid;
+                    const inputResponse = await fetch(`https://mempool.space/api/tx/${inputTxid}`);
+                    if (inputResponse.ok) {
+                        const inputData = await inputResponse.json();
+                        displayInputTransaction(inputData, timelineDiv, depth);
+                        // Recursively trace inputs, increasing the depth by 1
+                        await traceInputs(inputData, timelineDiv, depth + 1);
+                    }
+                }
+            }
+        }
+
+        function displayInputTransaction(data, timelineDiv, depth) {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.innerHTML = `
+        <h3>Input Transaction</h3>
+        <p><strong>Transaction ID:</strong> <span class="transaction-id">${data.txid}</span></p>
+        <p><strong>Block Height:</strong> ${data.status.block_height}</p>
+        <p><strong>Size:</strong> ${data.size} bytes</p>
+        <p><strong>Fee:</strong> ${data.fee} sats</p>
+        <p><strong>Time:</strong> ${new Date(data.status.block_time * 1000).toLocaleString()}</p>
+    `;
+            timelineDiv.appendChild(item);
+
+            // Display outputs for the current input transaction
+            const outputsDiv = document.createElement('div');
+            outputsDiv.className = 'nested';
+            outputsDiv.innerHTML = '<h4>Outputs:</h4>';
+            for (const output of data.vout) {
+                const outputItem = document.createElement('div');
+                outputItem.innerHTML = `
+            <p><strong>Output Address:</strong><span class="transaction-id"> ${output.scriptpubkey_address || 'N/A'}</span></p>
+            <p><strong>Value:</strong> ${(output.value / 100000000).toFixed(8)} BTC</p>
+        `;
+                outputsDiv.appendChild(outputItem);
+            }
+            item.appendChild(outputsDiv);
+        }
+
+    </script>
+</body>
+
+</html>
