@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, maximum-scale=1, user-scalable=no">
     <meta name="lightning" content="lnurlp:bullish@getalby.com" />
-    
+
     <title>txTree</title>
 
     <link rel="icon" href="icon.png" sizes="192x192" type="image/png">
@@ -15,8 +15,11 @@
 </head>
 
 <body>
-    <h1 style="margin: 10px; margin-top: 0px;">txTree</h1>
-    
+    <h1 class="header">
+        <span>txTree</span>
+        <span class="version">v0.0.2</span>
+    </h1>
+
     <div class="container">
         <div class="input-container">
             <input type="text" id="txid" placeholder="Enter Transaction ID" />
@@ -71,23 +74,56 @@
             }
             const data = await response.json();
             displayTransaction(data, timelineDiv);
-            await traceInputs(data, timelineDiv);
+            //await traceInputs(data, timelineDiv);
         }
 
         function displayTransaction(data, timelineDiv) {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = `
-        <p><strong>Transaction ID:</strong> <span class="transaction-id">${data.txid}</span></p>
-        <p><strong>Block Height:</strong> ${data.status.block_height}</p>
-        <p><strong>Size:</strong> ${data.size} bytes</p>
-        <p><strong>Fee:</strong> ${data.fee} satoshis</p>
-        <p><strong>Time:</strong> ${new Date(data.status.block_time * 1000).toLocaleString()}</p>
-    `;
+                <p><strong>Transaction ID:</strong> <a href="#" class="transaction-id" onclick="fetchTransaction('${data.txid}')">${data.txid}</a></p>
+                <p><strong>Block Height:</strong> ${data.status.block_height}</p>
+                <p><strong>Size:</strong> ${data.size} bytes</p>
+                <p><strong>Fee:</strong> ${data.fee} satoshis</p>
+                <p><strong>Time:</strong> ${new Date(data.status.block_time * 1000).toLocaleString()}</p>
+            `;
+
+            // Display inputs for the current transaction
+            const inputsDiv = document.createElement('div');
+            inputsDiv.className = 'nested';
+            const inputCount = data.vin.length;
+            inputsDiv.innerHTML = `<h4>Inputs (${inputCount}):</h4>`;
+
+            for (const input of data.vin) {
+                const inputItem = document.createElement('div');
+                inputItem.innerHTML = `
+                    <p><strong>Transaction ID:</strong> <a href="#" class="transaction-id" onclick="fetchTransaction('${input.txid}')">${input.txid}</a></p>
+                    <p><strong>Input Address:</strong> <span class="transaction-id">${input.prevout.scriptpubkey_address || 'N/A'}</span></p>
+                    <p><strong>Value:</strong> ${(input.prevout.value / 100000000).toFixed(8)} BTC</p>
+                `;
+                inputsDiv.appendChild(inputItem);
+            }
+            resultDiv.appendChild(inputsDiv);
+
+            // Display outputs for the current transaction
+            const outputsDiv = document.createElement('div');
+            outputsDiv.className = 'nested';
+            const outputCount = data.vout.length;
+            outputsDiv.innerHTML = `<h4>Outputs (${outputCount}):</h4>`;
+
+            for (const output of data.vout) {
+                const outputItem = document.createElement('div');
+                outputItem.innerHTML = `
+                    <p><strong>Output Address:</strong> <span class="transaction-id">${output.scriptpubkey_address || 'N/A'}</span></p>
+                    <p><strong>Value:</strong> ${(output.value / 100000000).toFixed(8)} BTC</p>
+                `;
+                outputsDiv.appendChild(outputItem);
+            }
+            resultDiv.appendChild(outputsDiv);
         }
 
         async function traceInputs(data, timelineDiv, depth = 0) {
             // Limit the recursion to a maximum depth of 3
-            if (depth >= 3) {
+            if (depth >= 2) {
                 return;
             }
 
@@ -105,7 +141,7 @@
             }
         }
 
-        function displayInputTransaction(data, timelineDiv, depth) {
+        function displayInputtTransaction(data, timelineDiv, depth) {
             const item = document.createElement('div');
             item.className = 'timeline-item';
             item.innerHTML = `
@@ -121,13 +157,19 @@
             // Display outputs for the current input transaction
             const outputsDiv = document.createElement('div');
             outputsDiv.className = 'nested';
-            outputsDiv.innerHTML = '<h4>Outputs:</h4>';
+
+            // Get the number of outputs
+            const outputCount = data.vout.length;
+
+            // Update the innerHTML to include the count of outputs
+            outputsDiv.innerHTML = `<h4>Outputs (${outputCount}):</h4>`;
+
             for (const output of data.vout) {
                 const outputItem = document.createElement('div');
                 outputItem.innerHTML = `
-            <p><strong>Output Address:</strong><span class="transaction-id"> ${output.scriptpubkey_address || 'N/A'}</span></p>
-            <p><strong>Value:</strong> ${(output.value / 100000000).toFixed(8)} BTC</p>
-        `;
+                    <p><strong>Output Address:</strong><span class="transaction-id"> ${output.scriptpubkey_address || 'N/A'}</span></p>
+                    <p><strong>Value:</strong> ${(output.value / 100000000).toFixed(8)} BTC</p>
+                `;
                 outputsDiv.appendChild(outputItem);
             }
             item.appendChild(outputsDiv);
