@@ -17,7 +17,7 @@
 <body>
     <h1 class="header">
         <span>txTree</span>
-        <span class="version">v0.0.3</span>
+        <span class="version">v0.0.4</span>
     </h1>
 
     <div class="container">
@@ -83,7 +83,7 @@
                 <p><strong>Transaction ID:</strong> <a href="#" class="transaction-id" onclick="fetchTransaction('${data.txid}')">${data.txid}</a></p>
                 <p><strong>Block Height:</strong> ${data.status.block_height}</p>
                 <p><strong>Size:</strong> ${data.size} bytes</p>
-                <p><strong>Fee:</strong> ${data.fee} satoshis</p>
+                <p><strong>Fee:</strong> ${data.fee} sats</p>
                 <p><strong>Time:</strong> ${new Date(data.status.block_time * 1000).toLocaleString()}</p>
             `;
 
@@ -93,8 +93,14 @@
             const inputCount = data.vin.length;
             inputsDiv.innerHTML = `<h4>Inputs (${inputCount}):</h4>`;
 
-            for (const input of data.vin) {
+            for (let i = 0; i < data.vin.length; i++) {
+                const input = data.vin[i];
                 const inputItem = document.createElement('div');
+
+                // Alternate background colors
+                inputItem.style.backgroundColor = (i % 2 === 0) ? '#222' : '#333'; 
+                inputItem.style.padding = '10px';
+
                 inputItem.innerHTML = `
                     <p><strong>Transaction ID:</strong> <a href="#" class="transaction-id" onclick="fetchTransaction('${input.txid}')">${input.txid}</a></p>
                     <p><strong>Input Address:</strong> <span class="transaction-id">${input.prevout.scriptpubkey_address || 'N/A'}</span></p>
@@ -104,14 +110,21 @@
             }
             resultDiv.appendChild(inputsDiv);
 
+
             // Display outputs for the current transaction
             const outputsDiv = document.createElement('div');
             outputsDiv.className = 'nested';
             const outputCount = data.vout.length;
             outputsDiv.innerHTML = `<h4>Outputs (${outputCount}):</h4>`;
 
-            for (const output of data.vout) {
+            for (let i = 0; i < data.vout.length; i++) {
+                const output = data.vout[i];
                 const outputItem = document.createElement('div');
+
+                // Alternate background colors
+                outputItem.style.backgroundColor = (i % 2 === 0) ? '#222' : '#333'; 
+                outputItem.style.padding = '10px';
+
                 outputItem.innerHTML = `
                     <p><strong>Output Address:</strong> <span class="transaction-id">${output.scriptpubkey_address || 'N/A'}</span></p>
                     <p><strong>Value:</strong> ${(output.value / 100000000).toFixed(8)} BTC</p>
